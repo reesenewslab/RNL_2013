@@ -1,0 +1,317 @@
+<?php
+
+add_action( 'widgets_init', 'weeklyreads_load_widgets' );
+
+/**
+ * Register our widget.
+ * 'Example_Widget' is the widget class used below.
+ *
+ * @since 0.1
+ */
+function weeklyreads_load_widgets($args) {
+	register_widget( 'WeeklyReads_Widget' , $args );
+}
+
+function weeklyreads_shortcode($atts){
+	extract(
+		shortcode_atts(
+			array(
+					'category_slug' 	=> 'blogroll',
+					'orderby' 			=> 'link_id',
+					'order' 			=> 'DESC',
+					'limit'				=> -1,
+					'tag'				=> 'h3',
+					'list_class'		=> ''
+			), $atts
+		)
+	);
+
+	// GET CATEGORY ID BY SLUG
+	$cat = get_term_by('slug',$category_slug,'link_category',ARRAY_A);
+
+	// SET ARGUMENTS FOR GET BOOKMARKS
+	$args = array(
+		'orderby' 		=> $orderby,
+		'order'			=> $order,
+		'limit'			=> $limit,
+		'category'		=> $cat['term_id']
+	); 
+
+	// GET LINKS ARRAYS
+	$links 		=		get_bookmarks($args);
+
+	$display .= '</div></div>';
+	foreach($links as $link):
+
+		$display 	 .= '<div class="row-fluid"><div class="span12 content_paragraph">';
+			$display .= '<'.$tag.'>';
+			$display .= '<a href="'.$link->link_url.'" target="_blank">';
+			$display .= $link->link_name;
+			$display .= '</a>';
+			$display .= '</'.$tag.'>';
+			if($link->link_description)
+				$display .= '<p>'.$link->link_description.'</p>';
+		$display 	 .= "</div></div>";
+	endforeach;
+
+	return $display;
+
+}
+
+add_shortcode( 'weeklyreads', 'weeklyreads_shortcode' );
+
+/**
+ * This class handles everything that needs to be handled with the widget:
+ * the settings, form, display, and update.  Nice!
+ *
+ * @since 0.1
+ */
+class WeeklyReads_Widget extends WP_Widget {
+
+	/**
+	 * Widget setup.
+	 */
+	function WeeklyReads_Widget() {
+		/* Widget settings. */
+		$widget_ops = array( 'classname' => 'weeklyreads', 'description' => __('A widget that displays the latest additions to a blogroll.', 'example') );
+
+		/* Widget control settings. */
+		$control_ops = array( 'width' => 300, 'height' => 350, 'id_base' => 'weeklyreads-widget' );
+
+		/* Create the widget. */
+		$this->WP_Widget( 'weeklyreads-widget', __('Blogroll Widget', 'example'), $widget_ops, $control_ops );
+	}
+
+	/**
+	 * How to display the widget on the screen.
+	 */
+	function widget( $args, $instance ) {
+		extract( $args );
+
+		/* Our variables from the widget settings. */
+		$title 							= apply_filters('widget_title', $instance['title'] );
+		$limit 							= $instance['limit'];
+		$order_by 						= $instance['order_by'];
+			$order_by 						= explode('-',$order_by);
+			$order['orderby']				=	$order_by[0];
+			$order['order']					=	$order_by[1];
+		$category 						= $instance['category'];
+		
+		$name_tags 						= $instance['name_tags'];
+		$before_widget_add 				= html_entity_decode($instance['before_widget']);
+		$after_widget_add				= html_entity_decode($instance['after_widget']);
+		
+		// TITLE TAGS
+		$title_tags						= $instance['title_tags'];
+		$title_class					= $instance['title_class'];
+			$title_tag['before']		= '<'.$title_tags;
+			if($title_class)			$title_tag['before']		.=' class="'.$title_class.'"';
+			$title_tag['before']		.='>';
+			$title_tag['after']			= '</'.$title_tags.'>';
+
+		$link_class 					= $instance['link_class'];
+		$description_class				= $instance['description_class'];
+		$page_id 		= $instance['page_id'];
+		$page_url 		= get_permalink($page_id);
+
+		/* Before widget (defined by themes). */
+		echo $before_widget . $before_widget_add;
+
+		/* Display the widget title if one was input (before and after defined by themes). */
+		if ( $title ):
+			if($title_tags) 		echo $before_title . $title_tag['before'];		
+			if($page_url != '')		echo '<a href="'.$page_url.'">';	
+									echo $title;
+			if($page_url != '')		echo '</a>';
+			if($title_tags)			echo $title_tag['after'] . $after_title;
+		endif;
+
+		/* Get ARGS */
+		if ( $order_by ){		$new['orderby'] 	= $order['orderby'];
+								$new['order']		= $order['order'];}
+		if ( $limit ){			$new['limit'] 		= $limit;}
+		if( $category ){		$new['category']	= $category;}
+
+		/* GET LINK ARRAY */
+		$links 		=	get_bookmarks($new);
+
+		echo '<ul>';
+		
+		/* DISPLAY LINKS */
+		foreach($links as $link):
+			echo '<li';
+			if($link_class) echo ' class="'.$link_class.'"';
+			echo '>';
+			if($name_tags != '') 		echo '<'.$name_tags.'>';
+			echo '<a href="'.$link->link_url.'" target="_blank">'.$link->link_name.'</a>';
+			if($name_tags != '') 		echo '</'.$name_tags.'>';
+			echo '<p';
+			if($description_class) echo ' class="'.$description_class.'"';
+			echo '>' . $link->link_description.'</p>';
+			echo '</li>';
+		endforeach;
+
+		echo '</ul>';
+
+		/* After widget (defined by themes). */
+		echo $after_widget_add . $after_widget;
+	}
+
+	/**
+	 * Update the widget settings.
+	 */
+	function update( $new_instance, $old_instance ) {
+		$instance = $old_instance;
+
+		/* Strip tags for title and name to remove HTML (important for text inputs). */
+		$instance['title'] 				= strip_tags( $new_instance['title'] );
+		$instance['limit'] 				= strip_tags( $new_instance['limit'] );
+
+		$instance['order_by'] 			= $new_instance['order_by'];
+		$instance['category'] 			= $new_instance['category'];
+		$instance['name_tags'] 			= $new_instance['name_tags'];
+		$instance['page_id'] 			= $new_instance['page_id'];
+		$instance['before_widget'] 		= htmlentities($new_instance['before_widget']);
+		$instance['after_widget']		= htmlentities($new_instance['after_widget']);
+		$instance['title_class']		= $new_instance['title_class'];
+		$instance['link_class']			= $new_instance['link_class'];
+		$instance['description_class']	= $new_instance['description_class'];
+		$instance['title_tags']			= $new_instance['title_tags'];
+
+		return $instance;
+	}
+
+	/**
+	 * Displays the widget settings controls on the widget panel.
+	 * Make use of the get_field_id() and get_field_name() function
+	 * when creating your form elements. This handles the confusing stuff.
+	 */
+	function form( $instance ) {
+
+		/* Set up some default widget settings. */
+		$defaults = array( 'title' => 'Weekly Reads', 'order_by' => 'link_updated-DESC', 'limit' => '1', 'name_tags' => 'h2' );
+		$instance = wp_parse_args( (array) $instance, $defaults ); 
+
+		?>
+
+		<!-- Widget Title: Text Input -->
+		<p>
+			<label for="<?php echo $this->get_field_id( 'title' ); ?>"><?php _e('Title:', 'hybrid'); ?></label>
+			<input id="<?php echo $this->get_field_id( 'title' ); ?>" name="<?php echo $this->get_field_name( 'title' ); ?>" value="<?php echo $instance['title']; ?>" class="widefat" />
+		</p>
+
+		<!-- Category: Select Box -->
+		<p>
+			<label for="<?php echo $this->get_field_id( 'category' ); ?>"><?php _e('Category:', 'weeklyreads'); ?></label> 
+			<select id="<?php echo $this->get_field_id( 'category' ); ?>" name="<?php echo $this->get_field_name( 'category' ); ?>" class="widefat">
+				<?php $categories = get_terms('link_category', 'orderby=count&hide_empty=0'); 
+					echo '<br/>';
+					foreach($categories as $category): ?>
+						<option <?php if($category->term_id == $instance['category']) echo 'selected="selected"';?>value="<?php echo $category->term_id;?>"><?php echo $category->name;?></option>
+					<?php endforeach; ?>
+			</select>
+		</p>
+
+		<!-- Limit: Text Input -->
+		<p>
+			<label for="<?php echo $this->get_field_id( 'limit' ); ?>"><?php _e('Number displayed (-1 displays all):', 'weeklyreads'); ?></label>
+			<input id="<?php echo $this->get_field_id( 'limit' ); ?>" name="<?php echo $this->get_field_name( 'limit' ); ?>" value="<?php echo $instance['limit']; ?>" class="widefat"  />
+		</p>
+
+		<!-- Order By: Select Box -->
+		<p>
+			<label for="<?php echo $this->get_field_id( 'order_by' ); ?>"><?php _e('Order by:', 'weeklyreads'); ?></label> 
+			<select id="<?php echo $this->get_field_id( 'order_by' ); ?>" name="<?php echo $this->get_field_name( 'order_by' ); ?>" class="widefat">
+				<option value="link_id-DESC" <?php if ( 'link_updated-DESC' == $instance['order_by'] ) echo 'selected="selected"'; ?>>Newest to Oldest</option>
+				<option value="link_id-ASC" <?php if ( 'link_updated-ASC' == $instance['order_by'] ) echo 'selected="selected"'; ?>>Oldest to Newest</option>
+				<option value="link_name-ASC" <?php if ( 'link_name-ASC' == $instance['order_by'] ) echo 'selected="selected"'; ?>>Alphabetical, A-Z</option>
+				<option value="link_name-DESC" <?php if ( 'link_name-DESC' == $instance['order_by'] ) echo 'selected="selected"'; ?>>Alphabetical, Z-A</option>
+			</select>
+		</p>
+
+		<!-- Link to Page -->
+		<p>
+			<label for="<?php echo $this->get_field_id( 'page_id' );?>"><?php _e('Page to link to:', 'weeklyreads'); ?></label>
+			<select id="<?php echo $this->get_field_id( 'page_id' ); ?>" name="<?php echo $this->get_field_name( 'page_id' ); ?>" class="widefat">
+				<option value="">----</option>
+				<?php $pages = get_pages(); 
+				foreach($pages as $page):?>
+				<option value="<?php echo $page->ID;?>" <?php if( $page->ID == $instance['page_id']) echo 'selected="selected"';?>><?php echo $page->post_title;?></option>
+				<?php endforeach;?>
+
+			</select>
+		</p>
+
+		<!-- STYLING -->
+		<h3>Widget title styles</h3>
+
+		<!-- STYLE TITLE -->
+		<p>
+			<label for="<?php echo $this->get_field_id( 'title_tags' ); ?>"><?php _e('Tags for widget title:', 'weeklyreads'); ?></label> 
+			<select id="<?php echo $this->get_field_id( 'title_tags' ); ?>" name="<?php echo $this->get_field_name( 'title_tags' ); ?>" class="widefat">
+				<option value="p" <?php if( 'p' == $instance['title_tags'] ) echo 'selected="selected"'; ?>>P</option> 
+				<option value="h1" <?php if ( 'h1' == $instance['title_tags'] ) echo 'selected="selected"'; ?>>H1</option>
+				<option value="h2" <?php if ( 'h2' == $instance['title_tags'] ) echo 'selected="selected"'; ?>>H2</option>
+				<option value="h3" <?php if ( 'h3' == $instance['title_tags'] ) echo 'selected="selected"'; ?>>H3</option>
+				<option value="h4" <?php if ( 'h4' == $instance['title_tags'] ) echo 'selected="selected"'; ?>>H4</option>
+				<option value="h5" <?php if ( 'h5' == $instance['title_tags'] ) echo 'selected="selected"'; ?>>H5</option>
+				<option value="h6" <?php if ( 'h6' == $instance['title_tags'] ) echo 'selected="selected"'; ?>>H6</option>
+			</select>
+		</p>
+
+		<!-- TITLE CLASS -->
+		<p>
+			<label for="<?php echo $this->get_field_id( 'title_class' ); ?>"><?php _e('Class name for widget title:', 'weeklyreads'); ?></label>
+			<input id="<?php echo $this->get_field_id( 'title_class' ); ?>" name="<?php echo $this->get_field_name( 'title_class' ); ?>" value="<?php echo $instance['title_class']; ?>" class="widefat"  />
+		</p>
+
+		<h3>Link styles</h3>
+
+		<!-- STYLE LINK TAGS -->
+		<p>
+			<label for="<?php echo $this->get_field_id( 'name_tags' ); ?>"><?php _e('Tags for link title:', 'weeklyreads'); ?></label> 
+			<select id="<?php echo $this->get_field_id( 'name_tags' ); ?>" name="<?php echo $this->get_field_name( 'name_tags' ); ?>" class="widefat">
+				<option value="">----</option>
+				<option value="p" <?php if( 'p' == $instance['name_tags'] ) echo 'selected="selected"'; ?>>P</option> 
+				<option value="h1" <?php if ( 'h1' == $instance['name_tags'] ) echo 'selected="selected"'; ?>>H1</option>
+				<option value="h2" <?php if ( 'h2' == $instance['name_tags'] ) echo 'selected="selected"'; ?>>H2</option>
+				<option value="h3" <?php if ( 'h3' == $instance['name_tags'] ) echo 'selected="selected"'; ?>>H3</option>
+				<option value="h4" <?php if ( 'h4' == $instance['name_tags'] ) echo 'selected="selected"'; ?>>H4</option>
+				<option value="h5" <?php if ( 'h5' == $instance['name_tags'] ) echo 'selected="selected"'; ?>>H5</option>
+				<option value="h6" <?php if ( 'h6' == $instance['name_tags'] ) echo 'selected="selected"'; ?>>H6</option>
+			</select>
+		</p>
+
+		<!-- LINK CLASS -->
+		<p>
+			<label for="<?php echo $this->get_field_id( 'link_class' ); ?>"><?php _e('Class name for link title:', 'weeklyreads'); ?></label>
+			<input id="<?php echo $this->get_field_id( 'link_class' ); ?>" name="<?php echo $this->get_field_name( 'link_class' ); ?>" value="<?php echo $instance['link_class']; ?>" class="widefat"  />
+		</p>
+
+		<h3>Link description</h3>
+
+		<!-- DESCRIPTION CLASS -->
+		<p>
+			<label for="<?php echo $this->get_field_id( 'description_class' ); ?>"><?php _e('Class name for description:', 'weeklyreads'); ?></label>
+			<input id="<?php echo $this->get_field_id( 'description_class' ); ?>" name="<?php echo $this->get_field_name( 'description_class' ); ?>" value="<?php echo $instance['description_class']; ?>" class="widefat"  />
+		</p>
+
+		<h3>Code surrounding widgets</h3>
+
+		<!-- BEFORE WIDGET -->
+		<p>
+			<label for="<?php echo $this->get_field_id( 'before_widget' ); ?>"><?php _e('Code before widget:', 'weeklyreads'); ?></label>
+			<input id="<?php echo $this->get_field_id( 'before_widget' ); ?>" name="<?php echo $this->get_field_name( 'before_widget' ); ?>" value="<?php echo $instance['before_widget']; ?>" class="widefat"  />
+		</p>
+
+		<!-- AFTER WIDGET -->
+		<p>
+			<label for="<?php echo $this->get_field_id( 'after_widget' ); ?>"><?php _e('Code after widget:', 'weeklyreads'); ?></label>
+			<input id="<?php echo $this->get_field_id( 'after_widget' ); ?>" name="<?php echo $this->get_field_name( 'after_widget' ); ?>" value="<?php echo $instance['after_widget']; ?>" class="widefat"  />
+		</p>
+
+	<?php
+	}
+}
+
+?>

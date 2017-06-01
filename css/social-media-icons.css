@@ -1,0 +1,18 @@
+/* SOCIAL MEDIA ICONS */
+
+	.social_media_icon:hover{				opacity: 0.5;}
+
+	.social_media_icon{						display: inline-block; width: 32px; height: 32px; margin: 0 2.5px;}
+
+	.social_media_icon.blue{				background:url('../img/socialmedia/socialmedia_blue_32x32.png');}
+	.social_media_icon.green{				background:url('../img/socialmedia/socialmedia_green_32x32.png');}
+	.social_media_icon.red{					background:url('../img/socialmedia/socialmedia_red_32x32.png');}
+	.social_media_icon.yellow{				background:url('../img/socialmedia/socialmedia_yellow_32x32.png');}
+
+	.social_media_icon.twitter{				background-position:    0px 0px !important;}
+	.social_media_icon.facebook{			background-position:  -32px 0px !important;}
+	.social_media_icon.foursquare{			background-position:  -64px 0px !important;}
+	.social_media_icon.flickr{				background-position:  -96px 0px !important;}
+	.social_media_icon.youtube{				background-position: -128px 0px !important;}
+	.social_media_icon.instagram{			background-position: -160px 0px !important;}
+	.social_media_icon.linkedin{			background-position: -160px 0px !important;}

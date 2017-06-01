@@ -1,0 +1,35 @@
+/* IE stylesheet */
+
+#head{
+	display: block;
+	background-color: #fff;
+	padding-top: 20px;
+	filter: alpha(opacity=95);
+}
+
+
+#intro{
+	display: block;
+	background-color: #ffffff;
+	filter: alpha(opacity=75);
+	padding: 3em 0 0 0;
+}
+	#intro img{
+		width: 25%;
+		bottom: 0;
+	}
+
+	#top-story-container{
+		padding-bottom: 3em;
+	}
+
+	#intro .btn{
+		display: inline-block;	
+		height: 30px;
+		width: 300px;}
+.repeated-stories .span4{
+	width: 30%;
+	display: inline-block;
+}
+
+
